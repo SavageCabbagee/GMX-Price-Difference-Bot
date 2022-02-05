@@ -1,0 +1,1 @@
+# GMX-Price-Difference-Bot
