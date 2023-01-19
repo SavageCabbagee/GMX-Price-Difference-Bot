@@ -55,7 +55,7 @@ interface Immutables {
   tickSpacing: number;
   maxLiquidityPerTick: ethers.BigNumber;
 }
-  
+
 interface State {
   liquidity: ethers.BigNumber;
   sqrtPriceX96: ethers.BigNumber;
@@ -66,7 +66,7 @@ interface State {
   feeProtocol: number;
   unlocked: boolean;
 }
-  
+
 async function getPoolImmutablesETH() {
   const [factory, token0, token1, fee, tickSpacing, maxLiquidityPerTick] =
     await Promise.all([
@@ -88,13 +88,13 @@ async function getPoolImmutablesETH() {
   };
   return immutables;
 }
-  
+
 async function getPoolStateETH() {
   const [liquidity, slot] = await Promise.all([
     poolContractETH.liquidity(),
     poolContractETH.slot0(),
   ]);
-  
+
   const PoolState: State = {
     liquidity,
     sqrtPriceX96: slot[0],
@@ -114,7 +114,7 @@ async function getETHprice() {
     getPoolImmutablesETH(),
     getPoolStateETH(),
   ]);
-  
+
   const TokenA = new Token(42161, immutables.token0, 18, "WETH", "Wrapped Ether");
 
   const TokenB = new Token(42161, immutables.token1, 6, "USDC", "USD Coin");
@@ -142,7 +142,7 @@ async function getPoolImmutablesGMX() {
       poolContractGMX.tickSpacing(),
       poolContractGMX.maxLiquidityPerTick(),
     ]);
-  
+
   const immutables: Immutables = {
     factory,
     token0,
@@ -153,13 +153,13 @@ async function getPoolImmutablesGMX() {
   };
   return immutables;
 }
-  
+
 async function getPoolStateGMX() {
   const [liquidity, slot] = await Promise.all([
     poolContractGMX.liquidity(),
     poolContractGMX.slot0(),
   ]);
-  
+
   const PoolState: State = {
     liquidity,
     sqrtPriceX96: slot[0],
@@ -170,18 +170,16 @@ async function getPoolStateGMX() {
     feeProtocol: slot[5],
     unlocked: slot[6],
   };
-  
+
   return PoolState;
 }
-  
-
 
 async function getGMXpricefromETH() {
   const [immutables, state] = await Promise.all([
     getPoolImmutablesGMX(),
     getPoolStateGMX(),
   ]);
-  
+
   const TokenA = new Token(42161, immutables.token0, 18, "WETH", "Wrapped Ether");
 
   const TokenB = new Token(42161, immutables.token1, 18, "GMX", "GMX");
@@ -195,7 +193,7 @@ async function getGMXpricefromETH() {
     state.tick
   );
   const poolTokenPrice = poolExample.priceOf(TokenB).toSignificant(6)
-  
+
   return (poolTokenPrice);
 }
 
@@ -203,7 +201,7 @@ async function getGMXpriceArbi() {
    var eth = await getETHprice();
    var gmx = await getGMXpricefromETH();
    var gmx_usdc = (Number(eth) * Number(gmx)).toFixed(3);
-   
+
    return (gmx_usdc);
 };
 
@@ -213,9 +211,9 @@ async function getGMXpriceAvax() {
   const WAVAXGMXPair = await Fetcher.fetchPairData(WAVAX, GMX, providerAVAX);
 
   const route = new Route([WAVAXGMXPair, WAVAXUSDCPair], GMX);
-  
+
   const price = route.midPrice.toSignificant(5);
-  
+
   return (price);
 }
 
@@ -232,11 +230,11 @@ async function priceDiff() {
     const bond_price = (Number(await OhmProContract.trueBondPrice()) * Number(eth_price) / 10**7).toFixed(5);
     const maxpayout = (Number(await OhmProContract.maxPayout())/10**18).toFixed(5);
     const discount = (((Number(GMX_Arbi) - (Number(await OhmProContract.trueBondPrice()) * Number(eth_price) / 10**7)) / Number(GMX_Arbi)) * 100).toFixed(5);
-    
+
     if (price_diff < 0) {
         const percentage = (-1 * price_diff/ Number(GMX_Avax) * 100).toFixed(3);
 
-        bot.sendMessage('@GMXPrice','GMX price in Arbitrum: ' + GMX_Arbi + 
+        return bot.sendMessage('@GMXPrice','GMX price in Arbitrum: ' + GMX_Arbi + 
         '\nGMX price in Avax: ' + GMX_Avax + 
         '\nThere is a ' + percentage + '% discount on Arbitrum' +
         '\n\nA 10k USDC to GMX swap on TraderJoe with 0.5% slippage will give you a minimum of ' + 
@@ -252,7 +250,7 @@ async function priceDiff() {
     } else if (price_diff > 0) {
         const percentage = (price_diff/ Number(GMX_Arbi) * 100).toFixed(3);
 
-        bot.sendMessage('@GMXPrice','GMX price in Arbitrum: ' + GMX_Arbi + 
+        return bot.sendMessage('@GMXPrice','GMX price in Arbitrum: ' + GMX_Arbi + 
         '\nGMX price in Avax: ' + GMX_Avax + 
         '\nThere is a ' + percentage + '% discount on Avax' +
         '\n\n 10k USDC to GMX swap on TraderJoe with 0.5% slippage will give you a minimum of ' + 
@@ -266,7 +264,7 @@ async function priceDiff() {
         )
         .catch(error => console.log('Error:', error));
     } else {
-        bot.sendMessage('@GMXPrice', 'GMX price in Arbitrum: ' + GMX_Arbi + 
+        return bot.sendMessage('@GMXPrice', 'GMX price in Arbitrum: ' + GMX_Arbi + 
         '\nGMX price in Avax: ' + GMX_Avax + 
         '\nThere is no price difference' + 
         '\n\nA 10k USDC to GMX swap on TraderJoe with 0.5% slippage will give you a minimum of ' + 
@@ -312,7 +310,7 @@ async function trader() {
 //Listen for swaps
 async function listen() {
   var lasttxn = 0;
-  GMX_LP_AVAX.on("Swap", async (sender, amount0In, amount1In, amount0Out, amount1Out, to, log) => {
+  GMX_LP_AVAX.on("Swap", async (amount0In, amount0Out, log) => {
     console.log('amount0In: ' + amount0In);
     console.log('amount0Out: ' + amount0Out);
     console.log('transactionHash: ' + log.transactionHash);
@@ -333,14 +331,14 @@ async function listen() {
           if (Number(USD_value) > 8888) {
             var token1 = new ethers.Contract(decodedLogs.params[1].value[0], token_abi, providerAVAX);
             var token_symbol = await token1.symbol();
-            bot.sendMessage('@GMXPrice',`${USD_value} USD of ${token_symbol} is swapped for GMX\n${URL_txn}`);
+            return bot.sendMessage('@GMXPrice',`${USD_value} USD of ${token_symbol} is swapped for GMX\n${URL_txn}`);
           }
         } else {
           var USD_value = (Number(amount0Out)/ (10**18) * GMX_price).toFixed(3);
           if (Number(USD_value) > 8888) {
             var token1 = new ethers.Contract(decodedLogs.params[2].value[0], token_abi, providerAVAX);
             var token_symbol = await token1.symbol();
-            bot.sendMessage('@GMXPrice',`${USD_value} USD of ${token_symbol} is swapped for GMX\n${URL_txn}`);
+            return bot.sendMessage('@GMXPrice',`${USD_value} USD of ${token_symbol} is swapped for GMX\n${URL_txn}`);
           }
         }
       } else {
@@ -351,14 +349,14 @@ async function listen() {
           if (Number(USD_value) > 8888) {
             var token1 = new ethers.Contract(decodedLogs.params[1].value[(decodedLogs.params[2].value).length - 1], token_abi, providerAVAX);
             var token_symbol = await token1.symbol();
-            bot.sendMessage('@GMXPrice', `${USD_value} USD of GMX is swapped for ${token_symbol}\n${URL_txn}`);;
+            return bot.sendMessage('@GMXPrice', `${USD_value} USD of GMX is swapped for ${token_symbol}\n${URL_txn}`);;
           }
         } else {
         var USD_value = (Number(amount0In)/ (10**18) * GMX_price).toFixed(3);
           if (Number(USD_value) > 8888) {
             var token1 = new ethers.Contract(decodedLogs.params[2].value[(decodedLogs.params[2].value).length - 1], token_abi, providerAVAX);
             var token_symbol = await token1.symbol();
-            bot.sendMessage('@GMXPrice', `${USD_value} USD of GMX is swapped for ${token_symbol}\n${URL_txn}`);
+            return bot.sendMessage('@GMXPrice', `${USD_value} USD of GMX is swapped for ${token_symbol}\n${URL_txn}`);
           }
         }
       }
